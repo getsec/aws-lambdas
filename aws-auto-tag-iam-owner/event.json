@@ -1,0 +1,52 @@
+{
+  "version": "0",
+  "id": "8e2c9df2-86a9-3a0b-c155-6c0c2f7a9bed",
+  "detail-type": "AWS API Call via CloudTrail",
+  "source": "aws.iam",
+  "account": "736903191495",
+  "time": "2018-12-13T14:50:43Z",
+  "region": "us-east-1",
+  "resources": [],
+  "detail": {
+    "eventVersion": "1.05",
+    "userIdentity": {
+      "type": "IAMUser",
+      "principalId": "AIDAJCGBZIWOUF6TMFTOO",
+      "arn": "arn:aws:iam::736903191495:user/ngetty",
+      "accountId": "736903191495",
+      "accessKeyId": "ASIA2XEW2LPD4VFHAVVR",
+      "userName": "ngetty",
+      "sessionContext": {
+        "attributes": {
+          "mfaAuthenticated": "false",
+          "creationDate": "2018-12-13T13:55:51Z"
+        }
+      }
+    },
+    "eventTime": "2018-12-13T14:50:43Z",
+    "eventSource": "iam.amazonaws.com",
+    "eventName": "CreateRole",
+    "awsRegion": "us-east-1",
+    "sourceIPAddress": "64.4.90.120",
+    "userAgent": "console.amazonaws.com",
+    "requestParameters": {
+      "roleName": "test_role",
+      "description": "Allows EC2 instances to call AWS services on your behalf.",
+      "assumeRolePolicyDocument": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"sts:AssumeRole\"],\"Principal\":{\"Service\":[\"ec2.amazonaws.com\"]}}]}",
+      "tags": []
+    },
+    "responseElements": {
+      "role": {
+        "assumeRolePolicyDocument": "%7B%22Version%22%3A%222012-10-17%22%2C%22Statement%22%3A%5B%7B%22Effect%22%3A%22Allow%22%2C%22Action%22%3A%5B%22sts%3AAssumeRole%22%5D%2C%22Principal%22%3A%7B%22Service%22%3A%5B%22ec2.amazonaws.com%22%5D%7D%7D%5D%7D",
+        "arn": "arn:aws:iam::736903191495:role/test_role",
+        "roleId": "AROAJUWYV73UMZFOJQFWI",
+        "createDate": "Dec 13, 2018 2:50:43 PM",
+        "roleName": "test_role",
+        "path": "/"
+      }
+    },
+    "requestID": "77495d8d-fee6-11e8-88e0-ff3f0a49bb47",
+    "eventID": "25750a15-501d-452e-bd6e-d7a7cbd94b5c",
+    "eventType": "AwsApiCall"
+  }
+}

@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Lambdas for security and compliance
+
+# This tempalte is for security lambdas that allow for config rules
+# lambdas will execute the input params for the config rules
+
+
+
+Resources:
+  IAMAutoTagUserAndRolesLambdaFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Handler: "index.lambda_handler"
+      Environment:
+        Variables:
+          owner_tag_name: created_by
+      Role:
+        Fn::GetAtt:
+          - IAMAutoTaggerLambdaRole
+          - Arn
+      Code:
+        ZipFile: !Sub |
+            import boto3
+            import logging
+            import os
+
+            logger = logging.getLogger()
+            logger.setLevel(logging.INFO)
+
+            client = boto3.client('iam')
+
+            owner_tag_name = os.environ['owner_tag_name']
+
+            def auto_tag_iam_user(username, created_by, client, owner_tag_name):
+              response = client.tag_user(
+                UserName=username,
+                Tags=[
+                    {
+                        'Key': owner_tag_name,
+                        'Value': created_by
+                    },
+                ]
+              )
+              logger.info(f"User: '{username}' created_by: '{created_by}'")
+              return response
+
+            def auto_tag_iam_role(rolename, created_by, client, owner_tag_name):
+              response = client.tag_role(
+                RoleName=rolename,
+                Tags=[
+                    {
+                        'Key': owner_tag_name,
+                        'Value': created_by
+                    },
+                ]
+              )
+              logger.info(f"Role: '{rolename}' created_by: '{created_by}'")
+              return response
+
+            def lambda_handler(event, context):
+              # If the event is a create user make sure to invoke the tag_user function
+              if event['detail']['eventName'] == 'CreateUser':
+                username = event['detail']['requestParameters']['userName']
+                created_by = event['detail']['userIdentity']['arn'].split('/')[-1]
+                auto_tag_iam_user(username, created_by, client, owner_tag_name)
+              # If the event is a create role make sure to invoke the tag_role function
+              elif event['detail']['eventName'] == 'CreateRole':
+                rolename = event['detail']['requestParameters']['roleName']
+                created_by =  event['detail']['userIdentity']['arn'].split('/')[-1]
+                auto_tag_iam_role(rolename, created_by, client, owner_tag_name)
+      Runtime: "python3.6"
+      Timeout: 30
+
+  IAMAutoTaggerLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        -
+          # We put the Account ID and Region to allow for unique lambda's created in each account.
+          # This allows for completely unique lambdas, the LZ wont get stopped by a resource already being created
+          PolicyName: !Sub "allow-lambda-auto-tag-iam-${AWS::AccountId}-${AWS::Region}"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+              -
+                Effect: "Allow"
+                Action:
+                  - iam:TagRole
+                  - iam:TagUser
+                Resource: "*"
+
+  EC2AutoTagerCloudWatchEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "triggers whenever a user or role is created"
+      EventPattern:
+        source:
+          - aws.iam
+        detail-type:
+          - AWS API Call via CloudTrail
+        detail:
+          eventSource:
+            - iam.amazonaws.com
+          eventName:
+            - 'CreateRole'
+            - 'CreateUser'
+      Targets:
+      -
+        Arn:
+          Fn::GetAtt:
+            - "IAMAutoTagUserAndRolesLambdaFunction"
+            - "Arn"
+        Id: !Sub "auto-iam-tagger-${AWS::AccountId}"
+
+  IAMAutoTagUserAndRolesLambdaPermissions:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IAMAutoTagUserAndRolesLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+          - EC2AutoTagerCloudWatchEventRule
+          - Arn
+
+
+  ## THIS CONCLUDEDS THE EC2 AUTO-TAGGER
